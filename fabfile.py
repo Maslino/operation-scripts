@@ -163,15 +163,3 @@ def restart_cluster():
 def finalize():
     sudo("hdfs dfsadmin -finalizeUpgrade")
 
-
-
-
-
-
-
-
-
-
-
-
-
