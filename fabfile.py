@@ -38,8 +38,11 @@ def uname():
     run("uname -a")
 
 
-def exec_cmd(command_string):
-    run(command_string)
+def exec_cmd(command_string, require_sudo=0):
+    if require_sudo:
+        sudo(command_string)
+    else:
+        run(command_string)
 
 ###################################################################
 
@@ -84,24 +87,36 @@ def check_hbase():
         assert daemon not in output.lower()
 
 
+def stop_jobtracker():
+    """
+    停止namenode节点上的jobtracker服务
+    """
+    jobtracker_service = "hadoop-0.20-jobtracker"
+    sudo("service %s stop" % jobtracker_service)
+
+
+def stop_tasktracker():
+    """
+    停止所有datanode节点上的tasktracker服务
+    """
+    tasktracker_service = "hadoop-0.20-tasktracker"
+    sudo("service %s stop" % tasktracker_service)
+
+
 def stop_namenode():
     """
-    停止namenode节点上的namenode和jobtracker服务
+    停止namenode节点上的namenode服务
     """
     namenode_service = "hadoop-0.20-namenode"
-    jobtracker_service = "hadoop-0.20-jobtracker"
     sudo("service %s stop" % namenode_service)
-    sudo("service %s stop" % jobtracker_service)
 
 
 def stop_datanode():
     """
-    停止datanode节点上的datanode和tasktracker服务
+    停止所有datanode节点上的datanode服务
     """
     datanode_service = "hadoop-0.20-datanode"
-    tasktracker_service = "hadoop-0.20-tasktracker"
     sudo("service %s stop" % datanode_service)
-    sudo("service %s stop" % tasktracker_service)
 
 
 def check_hadoop():
