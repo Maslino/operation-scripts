@@ -10,10 +10,10 @@ from fabric.api import *
 from fabric.contrib.files import exists
 
 env.roledefs = {
-    "namenode": (
+    "nn": (
         "hadoop@nn",
     ),
-    "datanode": (
+    "dn": (
         "hadoop@192.168.1.147",
         "hadoop@192.168.1.148",
         "hadoop@192.168.1.150",
@@ -21,11 +21,12 @@ env.roledefs = {
         "hadoop@192.168.1.152",
         "hadoop@192.168.1.154",
     ),
-    "namenode-dev": (
-        "",
+    "nn-dev": (
+        "hadoop@10.1.16.221",
     ),
-    "datanode-dev": (
-        "",
+    "dn-dev": (
+        "hadoop@10.1.16.221",
+        "hadoop@10.1.16.222",
     ),
 }
 
@@ -64,7 +65,8 @@ def install_jdk7():
     with cd(target_dir):
         sudo("tar -zxf %s" % jdk7_tarball)
         for link in ["jdk", "latest"]:
-            sudo("rm %s" % link)
+            if exists(os.path.join(target_dir, link)):
+                sudo("rm %s" % link)
             sudo("ln -s %s %s" % (os.path.join(target_dir, "jdk1.7.0_21"), link))
 
 ###################################################################
@@ -186,13 +188,14 @@ def install_cdh4():
 
     with cd(download_dir):
         run("wget %s" % cdh4_rpm_url)
-        sudo("yum --nogpgcheck localinstall cloudera-cdh-4-0.x86_64.rpm")
+        sudo("yum --nogpgcheck localinstall -y cloudera-cdh-4-0.x86_64.rpm")
 
     sudo("rpm --import http://archive.cloudera.com/cdh4/redhat/6/x86_64/cdh/RPM-GPG-KEY-cloudera")
-    sudo("yum install hadoop-0.20-mapreduce-jobtracker")
-    sudo("yum install hadoop-hdfs-namenode")
-    sudo("yum install hadoop-0.20-mapreduce-tasktracker")
-    sudo("yum install hadoop-hdfs-datanode")
+    sudo("yum install -y hadoop-0.20-mapreduce-jobtracker")
+    sudo("yum install -y hadoop-hdfs-namenode")
+    sudo("yum install -y hadoop-0.20-mapreduce-tasktracker")
+    sudo("yum install -y hadoop-hdfs-datanode")
+    # sudo("yum install hadoop-client")
 
 #################################################################
 
