@@ -6,14 +6,17 @@
 clean log for hbase and hadoop
 """
 
+import os
+import sys
+import time
+import glob
 import datetime
-import os, glob, time ,sys
 
 
 SETTINGS = {
     "hbase": (
-            ("/home/hadoop/hbase-single/logs/hbase-hadoop-*-E?EX-LA-WEB*.log.*-??-??", 7),
-        ),
+        ("/home/hadoop/hbase-single/logs/hbase-hadoop-*-E?EX-LA-WEB*.log.*-??-??", 7),
+    ),
     "hadoop": (
         ("/var/log/hadoop/job_*_*_conf.xml", 30),
         ("/var/log/hadoop/history/E?EX-LA-WEB*_*_job_*_*_conf.xml", 30),
@@ -39,7 +42,7 @@ def __clean_file(pattern, days_before=30, do_clean=False):
 
 def main(argv):
     if len(argv) != 2 or argv[1] not in SETTINGS.keys():
-        print "Usage: %s {%s}"%(argv[0], "|".join(SETTINGS.keys()))
+        print "Usage: %s {%s}" % (argv[0], "|".join(SETTINGS.keys()))
         return
 
     service = argv[1]

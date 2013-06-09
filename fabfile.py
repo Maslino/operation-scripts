@@ -2,6 +2,8 @@
 
 """
 fabfile for Fabric
+
+Usage: fab task_name -R role1,role2
 """
 import os
 from fabric.api import *
@@ -18,25 +20,29 @@ env.roledefs = {
         "hadoop@192.168.1.151",
         "hadoop@192.168.1.152",
         "hadoop@192.168.1.154",
-    )
+    ),
+    "namenode-dev": (
+        "",
+    ),
+    "datanode-dev": (
+        "",
+    ),
 }
+
 
 def local_uname():
     local("uname -a")
 
-@roles('namenode')
-def nn_uname():
+
+def uname():
     run("uname -a")
 
-@roles("datanode")
-def dn_uname():
-    run("uname -a")
 
-@roles("datanode")
 def exec_cmd(command_string):
     run(command_string)
 
 ###################################################################
+
 
 def install_jdk7():
     """
@@ -45,28 +51,30 @@ def install_jdk7():
     # assume jdk7 tarball is under directory ~/download
     download_dir = "/home/hadoop/download"
     if not exists(download_dir):
-        run("mkdir %s"%download_dir)
+        run("mkdir %s" % download_dir)
 
     jdk7_tarball = os.path.join(download_dir, "jdk-7u21-linux-x64.tar.gz")
     if not exists(jdk7_tarball):
-        raise Exception("jdk7 tarball not found in directory: %s"%download_dir)
+        raise Exception("jdk7 tarball not found in directory: %s" % download_dir)
 
     target_dir = "/usr/java"
     with cd(target_dir):
-        sudo("tar -zxf %s"%jdk7_tarball)
+        sudo("tar -zxf %s" % jdk7_tarball)
         for link in ["jdk", "latest"]:
-            sudo("rm %s"%link)
-            sudo("ln -s %s %s"%(os.path.join(target_dir, "jdk1.7.0_21"), link))
+            sudo("rm %s" % link)
+            sudo("ln -s %s %s" % (os.path.join(target_dir, "jdk1.7.0_21"), link))
 
 ###################################################################
+
 
 def stop_hbase():
     """
     在所有datanode节点上停止hbase
     """
     stop_script = "/home/hadoop/hbase-single/bin/stop-hbase.sh"
-    run("%s"%stop_script)
-    
+    run("%s" % stop_script)
+
+
 def check_hbase():
     """
     在所有datanode节点上检查hbase是否已被停止
@@ -75,14 +83,16 @@ def check_hbase():
     for daemon in ["hmaster", "hregionserver", "hquorumpeer"]:
         assert daemon not in output.lower()
 
+
 def stop_namenode():
     """
     停止namenode节点上的namenode和jobtracker服务
     """
     namenode_service = "hadoop-0.20-namenode"
     jobtracker_service = "hadoop-0.20-jobtracker"
-    sudo("service %s stop"%namenode_service)
-    sudo("service %s stop"%jobtracker_service)
+    sudo("service %s stop" % namenode_service)
+    sudo("service %s stop" % jobtracker_service)
+
 
 def stop_datanode():
     """
@@ -90,8 +100,9 @@ def stop_datanode():
     """
     datanode_service = "hadoop-0.20-datanode"
     tasktracker_service = "hadoop-0.20-tasktracker"
-    sudo("service %s stop"%datanode_service)
-    sudo("service %s stop"%tasktracker_service)
+    sudo("service %s stop" % datanode_service)
+    sudo("service %s stop" % tasktracker_service)
+
 
 def check_hadoop():
     """
@@ -103,6 +114,7 @@ def check_hadoop():
 
 #################################################################
 
+
 def backup_hdfs_metadata():
     """
     在namenode节点上备份hdfs的元数据
@@ -111,27 +123,29 @@ def backup_hdfs_metadata():
     assert exists(metadata_dir)
     backup_dir = "/home/hadoop/backup"
     if not exists(backup_dir):
-        run("mkdir %s"%backup_dir)
+        run("mkdir %s" % backup_dir)
 
-    assert "lock" not in run("ls %s"%metadata_dir).lower()
+    assert "lock" not in run("ls %s" % metadata_dir).lower()
 
-    run("tar -cvf %s %s"%(
+    run("tar -cvf %s %s" % (
         os.path.join(backup_dir, "namenode_backup_metadata.tar"), metadata_dir))
-    
+
+
 def backup_hadoop_conf():
     """
     备份所有节点上的配置文件
     """
     orig_conf_dir = "/etc/hadoop/conf"
     backup_conf_dir = "/etc/hadoop/conf.cdh4"
-    run("cp -r %s %s"%(orig_conf_dir, backup_conf_dir))
-    sudo("update-alternatives --install %s hadoop-conf %s 50"%(orig_conf_dir, backup_conf_dir))
+    run("cp -r %s %s" % (orig_conf_dir, backup_conf_dir))
+    sudo("update-alternatives --install %s hadoop-conf %s 50" % (orig_conf_dir, backup_conf_dir))
 
     output = run("alternatives --display hadoop-conf")
     lines = output.split("\n")
     assert backup_conf_dir in lines[1]
 
 ################################################################
+
 
 def uninstall_cdh3():
     """
@@ -145,6 +159,7 @@ def uninstall_cdh3():
     if output:
         assert "hadoop" not in output.lower()
 
+
 def install_cdh4():
     """
     在所有节点上安装cdh4
@@ -152,10 +167,10 @@ def install_cdh4():
     cdh4_rpm_url = "http://archive.cloudera.com/cdh4/one-click-install/redhat/6/x86_64/cloudera-cdh-4-0.x86_64.rpm"
     download_dir = "/home/hadoop/download"
     if not exists(download_dir):
-        run("mkdir %s"%download_dir)
+        run("mkdir %s" % download_dir)
 
     with cd(download_dir):
-        run("wget %s"%cdh4_rpm_url)
+        run("wget %s" % cdh4_rpm_url)
         sudo("yum --nogpgcheck localinstall cloudera-cdh-4-0.x86_64.rpm")
 
     sudo("rpm --import http://archive.cloudera.com/cdh4/redhat/6/x86_64/cdh/RPM-GPG-KEY-cloudera")
@@ -166,11 +181,13 @@ def install_cdh4():
 
 #################################################################
 
+
 def replace_log4j_properties():
     """
     在所有节点上，用cdh4的log4j配置文件覆盖老版本的log4j配置文件
     """
     run("cp /etc/hadoop/conf.dist/log4j.properties /etc/hadoop/conf.cdh4/log4j.properties")
+
 
 def recover_hadoop_conf():
     """
@@ -180,13 +197,15 @@ def recover_hadoop_conf():
     pass
 
 #################################################################
-        
+
+
 def upgrade_hdfs():
     """
     升级hdfs， 在namenode节点上执行
     等待升级完成
     """
     sudo("service hadoop-hdfs-namenode upgrade")
+
 
 def start_datanode():
     """
@@ -195,13 +214,15 @@ def start_datanode():
     """
     sudo("service hadoop-hdfs-datanode start")
 
+
 def start_tasktracker():
     """
     在每个datanode上启动TaskTracker
     """
     sudo("service hadoop-0.20-mapreduce-tasktracker start")
     assert "tasktracker" in run("jps").lower()
-    
+
+
 def start_jobtracker():
     """
     在namenode节点上启动JobTracker
@@ -211,8 +232,10 @@ def start_jobtracker():
 
 #################################################################
 
+
 def restart_cluster():
     pass
+
 
 def finalize():
     run("hdfs dfsadmin -finalizeUpgrade")
