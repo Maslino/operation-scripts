@@ -84,7 +84,7 @@ def check_hbase():
     """
     在所有datanode节点上检查hbase是否已被停止
     """
-    output = run("jps")
+    output = sudo("/usr/java/jdk/bin/jps")
     for daemon in ["hmaster", "hregionserver", "hquorumpeer"]:
         assert daemon not in output.lower()
 
@@ -93,7 +93,7 @@ def stop_jobtracker():
     """
     停止namenode节点上的jobtracker服务
     """
-    jobtracker_service = "hadoop-0.20-jobtracker"
+    jobtracker_service = "hadoop-0.20-mapreduce-jobtracker"
     sudo("service %s stop" % jobtracker_service)
 
 
@@ -101,7 +101,7 @@ def stop_tasktracker():
     """
     停止所有datanode节点上的tasktracker服务
     """
-    tasktracker_service = "hadoop-0.20-tasktracker"
+    tasktracker_service = "hadoop-0.20-mapreduce-tasktracker"
     sudo("service %s stop" % tasktracker_service)
 
 
@@ -109,7 +109,7 @@ def stop_namenode():
     """
     停止namenode节点上的namenode服务
     """
-    namenode_service = "hadoop-0.20-namenode"
+    namenode_service = "hadoop-hdfs-namenode"
     sudo("service %s stop" % namenode_service)
 
 
@@ -117,7 +117,7 @@ def stop_datanode():
     """
     停止所有datanode节点上的datanode服务
     """
-    datanode_service = "hadoop-0.20-datanode"
+    datanode_service = "hadoop-hdfs-datanode"
     sudo("service %s stop" % datanode_service)
 
 
@@ -125,7 +125,7 @@ def check_hadoop():
     """
     检查hdfs和mapreduce服务是否停止
     """
-    output = run("jps")
+    output = sudo("/usr/java/jdk/bin/jps")
     for daemon in ["datanode", "tasktracker", "jobtracker", "namenode"]:
         assert daemon not in output.lower()
 
@@ -195,7 +195,6 @@ def install_cdh4():
     sudo("yum install -y hadoop-hdfs-namenode")
     sudo("yum install -y hadoop-0.20-mapreduce-tasktracker")
     sudo("yum install -y hadoop-hdfs-datanode")
-    # sudo("yum install hadoop-client")
 
 #################################################################
 
@@ -225,6 +224,10 @@ def upgrade_hdfs():
     sudo("service hadoop-hdfs-namenode upgrade")
 
 
+def start_namenode():
+    sudo("service hadoop-hdfs-namenode start")
+
+
 def start_datanode():
     """
     启动所有datanode节点
@@ -238,7 +241,7 @@ def start_tasktracker():
     在每个datanode上启动TaskTracker
     """
     sudo("service hadoop-0.20-mapreduce-tasktracker start")
-    assert "tasktracker" in run("jps").lower()
+    assert "tasktracker" in sudo("/usr/java/jdk/bin/jps").lower()
 
 
 def start_jobtracker():
@@ -246,7 +249,7 @@ def start_jobtracker():
     在namenode节点上启动JobTracker
     """
     sudo("service hadoop-0.20-mapreduce-jobtracker start")
-    assert "jobtracker" in run("jps").lower()
+    assert "jobtracker" in sudo("/usr/java/jdk/bin/jps").lower()
 
 #################################################################
 
