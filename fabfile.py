@@ -168,13 +168,14 @@ def uninstall_cdh3():
     """
     在所有节点上卸载cdh3
     """
-    sudo("yum remove hadoop-0.20")
-    sudo("yum remove bigtop-utils")
-    sudo("yum remove cloudera-cdh3")
+    for package in ("hadoop-0.20", "bigtop-utils", "cloudera-cdh3"):
+        sudo("yum remove -y %s" % package)
 
-    output = run("rpm -qa | grep -i hadoop")
+    # ensure that no hadoop or cdh package exists
+    output = run("rpm -qa | grep -i -E 'hadoop|cdh")
     if output:
         assert "hadoop" not in output.lower()
+        assert "cdh" not in output.lower()
 
 
 def install_cdh4():
@@ -195,6 +196,22 @@ def install_cdh4():
     sudo("yum install -y hadoop-hdfs-namenode")
     sudo("yum install -y hadoop-0.20-mapreduce-tasktracker")
     sudo("yum install -y hadoop-hdfs-datanode")
+
+
+def install_lzo():
+    """
+    在所有节点上安装LZO压缩库
+    """
+    lzo_cdh4_repo = "http://archive.cloudera.com/gplextras/redhat/6/x86_64/gplextras/cloudera-gplextras4.repo"
+    download_dir = "/home/hadoop/download"
+    if not exists(download_dir):
+        run("mkdir %s" % download_dir)
+
+    with cd(download_dir):
+        run("wget %s" % lzo_cdh4_repo)
+        sudo("cp cloudera-gplextras4.repo /etc/yum.repos.d/")
+        sudo("yum install -y hadoop-lzo-cdh4")
+
 
 #################################################################
 
