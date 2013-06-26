@@ -8,10 +8,13 @@ on namenode machine, run "fab task_name -R role1,role2"
 """
 
 import os
-import datetime
 from fabric.api import *
 from fabric.colors import red
 from fabric.contrib.files import exists
+
+from config import *
+from utils import *
+
 
 env.roledefs = {
     "pro-nn": (
@@ -46,25 +49,6 @@ def exec_cmd(command_string, use_sudo='false'):
         run(command_string)
 
 
-def convert_str_to_bool(string):
-    if isinstance(string, bool):
-        return string
-
-    if string.lower() == "true":
-        return True
-    elif string.lower() == "false":
-        return False
-
-    raise ValueError("cannot convert to bool")
-
-
-def test(remote):
-    remote = convert_str_to_bool(remote)
-    if remote:
-        run("uname -a")
-    else:
-        local("uname -a")
-
 ###################################################################
 
 
@@ -92,33 +76,6 @@ def install_jdk7():
 ###################################################################
 
 
-HBASE_HOME_DIR = "/home/hadoop/hbase-single"
-BACKUP_DIR = "/home/hadoop/backup"
-DOWNLOAD_DIR = "/home/hadoop/download"
-
-HBASE_HBCK_OLD_LOG = "hbase-hbck-old.log"
-HDFS_FSCK_OLD_LOG = "hdfs-fsck-old.log"
-HDFS_REPORT_OLD_LOG = "hdfs-report-old.log"
-HDFS_LSR_OLD_LOG = "hdfs-lsr-old.log"
-
-MAPRED_SYSTEM_DIR = "/home/hadoop/data/hadoop/cache/hadoop/mapred/system"
-MAPRED_LOCAL_DIR_LIST = [
-    "/home/hadoop/data/hadoop/cache/hadoop/mapred/local",
-    "/home/hadoop/data2/hadoop/cache/hadoop/mapred/local",
-    "/home/hadoop/data3/hadoop/cache/hadoop/mapred/local",
-    "/home/hadoop/data4/hadoop/cache/hadoop/mapred/local",
-]
-HDFS_NAME_DIR_LIST = [
-    "/home/hadoop/data/hadoop/cache/hadoop/dfs/name",
-]
-HDFS_DATA_DIR_LIST = [
-    "/home/hadoop/data/hadoop/cache/hadoop/dfs/data",
-    "/home/hadoop/data2/hadoop/cache/hadoop/dfs/data",
-    "/home/hadoop/data3/hadoop/cache/hadoop/dfs/data",
-    "/home/hadoop/data4/hadoop/cache/hadoop/dfs/data",
-]
-
-
 def make_directory(remote):
     """
     在所有节点上创建相关目录
@@ -131,10 +88,6 @@ def make_directory(remote):
         else:
             if not os.path.exists(directory):
                 local("mkdir -p %s" % directory)
-
-
-def date_suffix():
-    return str(datetime.datetime.now()).replace(" ", "-").replace(":", "-")
 
 
 def check_hbase():
@@ -411,10 +364,6 @@ def install_lzo(remote, centos_version=6):
 
 
 #################################################################
-
-# todo: config for cdh4
-
-PREPARED_CONF_DIR_FOR_CDH4 = "/home/hadoop/backup/conf.cdh4.prepared"
 
 
 def rsync_conf():
