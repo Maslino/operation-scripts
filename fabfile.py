@@ -6,13 +6,12 @@ fabfile for Fabric
 Usage:
 on namenode machine, run "fab task_name -R role1,role2"
 """
-from contextlib import closing
 
 import os
+import time
 from fabric.api import *
 from fabric.colors import red
 from fabric.contrib.files import exists
-import time
 
 env.roledefs = {
     "pro-nn": (
