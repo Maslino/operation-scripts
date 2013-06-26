@@ -161,7 +161,7 @@ def stop_jobtracker_cdh3():
     """
     停止namenode节点上的jobtracker服务
     """
-    jobtracker_service = "hadoop-0.20-mapreduce-jobtracker"
+    jobtracker_service = "hadoop-0.20-jobtracker"
     local("sudo /sbin/service %s stop" % jobtracker_service)
 
 
@@ -169,7 +169,7 @@ def stop_tasktracker_cdh3():
     """
     停止所有datanode节点上的tasktracker服务
     """
-    tasktracker_service = "hadoop-0.20-mapreduce-tasktracker"
+    tasktracker_service = "hadoop-0.20-tasktracker"
     sudo("/sbin/service %s stop" % tasktracker_service)
 
 
@@ -462,3 +462,39 @@ def start_jobtracker_cdh4():
 
 # def finalize():
 #     run("hdfs dfsadmin -finalizeUpgrade")
+
+
+#################################################################
+
+
+def before_upgrade_metadata_dev():
+    execute(make_directory, False)
+
+    execute(check_hbase, host='localhost')
+    execute(stop_hbase, host='localhost')
+    execute(confirm_hbase_stopped, host='localhost')
+
+    execute(stop_jobtracker_cdh3)
+    execute(stop_tasktracker_cdh3, host='localhost')
+    execute(confirm_mapred_stopped, False)
+    execute(confirm_mapred_stopped, True, host="localhost")
+
+    execute(check_hdfs)
+    execute(stop_namenode_cdh3)
+    execute(stop_datanode_cdh3, host="localhost")
+    execute(confirm_hdfs_stopped, False)
+    execute(confirm_mapred_stopped, True, host="localhost")
+
+    execute(backup_hdfs_metadata)
+    execute(backup_hadoop_conf)
+
+    execute(uninstall_cdh3, False)
+    execute(uninstall_cdh3, True, host="localhost")
+    execute(install_cdh4, False)
+    execute(install_cdh4, True, host="localhost")
+    execute(install_lzo, False)
+    execute(install_lzo, True, host="localhost")
+
+    execute(update_conf, False)
+    execute(change_mod_and_perm, False)
+    execute(change_mod_and_perm, True, host="localhost")
