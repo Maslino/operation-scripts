@@ -8,7 +8,7 @@ on namenode machine, run "fab task_name -R role1,role2"
 """
 
 import os
-import time
+import datetime
 from fabric.api import *
 from fabric.colors import red
 from fabric.contrib.files import exists
@@ -32,20 +32,24 @@ env.roledefs = {
         "hadoop@10.1.16.221",
         "hadoop@10.1.16.222",
     ),
-    "dev-online":(
+    "dev-online": (
         "hadoop@dev-online",
     )
 }
 
 
-def exec_cmd(command_string, require_sudo=0):
-    if require_sudo:
+def exec_cmd(command_string, use_sudo='false'):
+    use_sudo = convert_str_to_bool(use_sudo)
+    if use_sudo:
         sudo(command_string)
     else:
         run(command_string)
 
 
 def convert_str_to_bool(string):
+    if isinstance(string, bool):
+        return string
+
     if string.lower() == "true":
         return True
     elif string.lower() == "false":
@@ -91,10 +95,28 @@ def install_jdk7():
 HBASE_HOME_DIR = "/home/hadoop/hbase-single"
 BACKUP_DIR = "/home/hadoop/backup"
 DOWNLOAD_DIR = "/home/hadoop/download"
+
 HBASE_HBCK_OLD_LOG = "hbase-hbck-old.log"
 HDFS_FSCK_OLD_LOG = "hdfs-fsck-old.log"
 HDFS_REPORT_OLD_LOG = "hdfs-report-old.log"
 HDFS_LSR_OLD_LOG = "hdfs-lsr-old.log"
+
+MAPRED_SYSTEM_DIR = "/home/hadoop/data/hadoop/cache/hadoop/mapred/system"
+MAPRED_LOCAL_DIR_LIST = [
+    "/home/hadoop/data/hadoop/cache/hadoop/mapred/local",
+    "/home/hadoop/data2/hadoop/cache/hadoop/mapred/local",
+    "/home/hadoop/data3/hadoop/cache/hadoop/mapred/local",
+    "/home/hadoop/data4/hadoop/cache/hadoop/mapred/local",
+]
+HDFS_NAME_DIR_LIST = [
+    "/home/hadoop/data/hadoop/cache/hadoop/dfs/name",
+]
+HDFS_DATA_DIR_LIST = [
+    "/home/hadoop/data/hadoop/cache/hadoop/dfs/data",
+    "/home/hadoop/data2/hadoop/cache/hadoop/dfs/data",
+    "/home/hadoop/data3/hadoop/cache/hadoop/dfs/data",
+    "/home/hadoop/data4/hadoop/cache/hadoop/dfs/data",
+]
 
 
 def make_directory(remote):
@@ -111,13 +133,16 @@ def make_directory(remote):
                 local("mkdir -p %s" % directory)
 
 
+def date_suffix():
+    return str(datetime.datetime.now()).replace(" ", "-").replace(":", "-")
+
+
 def check_hbase():
     """
     在datanode节点上检查hbase数据
     """
     hbck_log = os.path.join(BACKUP_DIR, HBASE_HBCK_OLD_LOG)
-    while not exists(hbck_log):
-        hbck_log = ".".join([hbck_log, str(time.time())])
+    hbck_log = ".".join([hbck_log, date_suffix()])
 
     success = True
     with cd(HBASE_HOME_DIR):
@@ -152,6 +177,7 @@ def detect_jdk_home(remote):
         else:
             if os.path.exists(jdk):
                 jdk_home = jdk
+                break
 
     assert jdk_home is not None
     return jdk_home
@@ -159,7 +185,13 @@ def detect_jdk_home(remote):
 
 def get_jps_path(remote):
     remote = convert_str_to_bool(remote)
-    return os.path.join(detect_jdk_home(remote), "bin/jps")
+    jps_path = os.path.join(detect_jdk_home(remote), "bin/jps")
+    if remote:
+        assert exists(jps_path)
+    else:
+        assert os.path.exists(jps_path)
+
+    return jps_path
 
 
 def confirm_hbase_stopped():
@@ -197,25 +229,24 @@ def confirm_mapred_stopped(remote):
         output = sudo("%s" % get_jps_path(remote))
         assert "tasktracker" not in output.lower()
     else:
-        output = local("sudo %s" % get_jps_path(remote))
+        output = local("sudo %s" % get_jps_path(remote), capture=True)
         assert "jobtracker" not in output.lower()
 
 
 def check_hdfs():
-    fsck_log = HDFS_FSCK_OLD_LOG
-    while not exists(os.path.join(BACKUP_DIR, fsck_log)):
-        fsck_log = ".".join([fsck_log, str(time.time())])
+    fsck_log = ".".join([os.path.join(BACKUP_DIR, HDFS_FSCK_OLD_LOG), date_suffix()])
     local("hadoop fsck / -files -blocks -locations > %s" % fsck_log)
 
-    lsr_log = HDFS_LSR_OLD_LOG
-    while not exists(os.path.join(BACKUP_DIR, lsr_log)):
-        lsr_log = ".".join([lsr_log, str(time.time())])
+    lsr_log = ".".join([os.path.join(BACKUP_DIR, HDFS_LSR_OLD_LOG), date_suffix()])
     local("hadoop fs -lsr / > %s" % lsr_log)
 
-    report_log = HDFS_REPORT_OLD_LOG
-    while not exists(os.path.join(BACKUP_DIR, report_log)):
-        report_log = ".".join([report_log, str(time.time())])
+    report_log = ".".join([os.path.join(BACKUP_DIR, HDFS_REPORT_OLD_LOG), date_suffix()])
     local("hadoop dfsadmin -report > %s" % report_log)
+
+    output = local("tail -n19 %s" % fsck_log, capture=True)
+    if "HEALTHY" not in output:
+        print red("HDFS IS NOT HEALTHY")
+        raise Exception("hdfs is not healthy")
 
 
 def stop_namenode_cdh3():
@@ -243,7 +274,7 @@ def confirm_hdfs_stopped(remote):
         output = sudo("%s" % get_jps_path(remote))
         assert "datanode" not in output.lower()
     else:
-        output = local("%s" % get_jps_path(remote))
+        output = local("%s" % get_jps_path(remote), capture=True)
         assert "namenode" not in output.lower()
 
 #################################################################
@@ -254,9 +285,9 @@ def backup_hdfs_metadata():
     在namenode节点上备份hdfs的元数据
     """
     # metadata_dir = "/data/hadoop/cache/hadoop/dfs/name"
-    metadata_dir = "/home/hadoop/data/hadoop/cache/hadoop/dfs/name"
-    assert exists(metadata_dir)
-    assert "lock" not in local("ls %s" % metadata_dir).lower()
+    metadata_dir = HDFS_NAME_DIR_LIST[0]
+    assert os.path.exists(metadata_dir)
+    assert "lock" not in local("ls %s" % metadata_dir, capture=True).lower()
 
     local("tar -cvf %s %s" % (
         os.path.join(BACKUP_DIR, "namenode_backup_metadata.tar"), metadata_dir))
@@ -270,7 +301,9 @@ def backup_hadoop_conf():
     assert os.path.exists(orig_conf_dir)
     backup_conf_dir = os.path.join(BACKUP_DIR, "conf.cdh3")
 
-    local("mdkir %s" % backup_conf_dir)
+    if not os.path.exists(backup_conf_dir):
+        local("mkdir -p %s" % backup_conf_dir)
+
     local("cp -r %s %s" % (orig_conf_dir + "/*", backup_conf_dir))
 
 
@@ -282,7 +315,7 @@ def uninstall_cdh3(remote):
     在所有节点上卸载cdh3
     """
     remote = convert_str_to_bool(remote)
-    for package in ("hadoop-0.20", "bigtop-utils", "cloudera-cdh3"):
+    for package in ("hadoop-0.20", "bigtop-utils", "cloudera-cdh3", "cdh3-repository"):
         if remote:
             sudo("yum remove -y %s" % package)
         else:
@@ -293,7 +326,7 @@ def uninstall_cdh3(remote):
         if remote:
             output = run("rpm -qa")
         else:
-            output = local("rpm -qa")
+            output = local("rpm -qa", capture=True)
         if output:
             assert "hadoop" not in output.lower()
             assert "cdh" not in output.lower()
@@ -386,7 +419,7 @@ PREPARED_CONF_DIR_FOR_CDH4 = "/home/hadoop/backup/conf.cdh4.prepared"
 
 def rsync_conf():
     remote_host = "@".join([env.user, env.host])
-    local("rsync -avz --delete %s %s:%s" %(PREPARED_CONF_DIR_FOR_CDH4, remote_host, BACKUP_DIR))
+    local("rsync -avz --delete %s %s:%s" % (PREPARED_CONF_DIR_FOR_CDH4, remote_host, BACKUP_DIR))
 
 
 def update_conf(remote):
@@ -400,7 +433,7 @@ def update_conf(remote):
         if not exists(target_cdh4_conf_dir):
             sudo("mkdir %s" % target_cdh4_conf_dir)
 
-        sudo("cp %s %s" %(PREPARED_CONF_DIR_FOR_CDH4 + "/*", target_cdh4_conf_dir))
+        sudo("cp %s %s" % (PREPARED_CONF_DIR_FOR_CDH4 + "/*", target_cdh4_conf_dir))
         sudo("update-alternatives --install %s hadoop-conf %s 50" % ("/etc/hadoop/conf", target_cdh4_conf_dir))
 
         output = run("alternatives --display hadoop-conf")
@@ -410,16 +443,34 @@ def update_conf(remote):
         if not os.path.exists(target_cdh4_conf_dir):
             local("sudo mkdir %s" % target_cdh4_conf_dir)
 
-        local("sudo cp %s %s" %(PREPARED_CONF_DIR_FOR_CDH4 + "/*", target_cdh4_conf_dir))
+        local("sudo cp %s %s" % (PREPARED_CONF_DIR_FOR_CDH4 + "/*", target_cdh4_conf_dir))
         local("sudo update-alternatives --install %s hadoop-conf %s 50" % ("/etc/hadoop/conf", target_cdh4_conf_dir))
 
-        output = local("alternatives --display hadoop-conf")
+        output = local("alternatives --display hadoop-conf", capture=True)
         lines = output.split("\n")
         assert target_cdh4_conf_dir in lines[1]
 
 
-def change_mod_and_perm():
-    pass
+def change_mod_and_perm(remote):
+    if remote:
+        for data_dir in HDFS_DATA_DIR_LIST:
+            if exists(data_dir):
+                sudo("chmod -R 755 %s" % data_dir)
+                sudo("chown -R hdfs:hdfs %s" % data_dir)
+
+        for mapred_local_dir in MAPRED_LOCAL_DIR_LIST:
+            if exists(mapred_local_dir):
+                sudo("chown -R mapred:mapred %s" % mapred_local_dir)
+    else:
+        for name_dir in HDFS_NAME_DIR_LIST:
+            if os.path.exists(name_dir):
+                local("sudo chown -R hdfs:hdfs %s" % name_dir)
+
+        for mapred_local_dir in MAPRED_LOCAL_DIR_LIST:
+            if os.path.exists(mapred_local_dir):
+                local("sudo chown -R mapred:mapred %s" % mapred_local_dir)
+
+        local("sudo -u hdfs hadoop fs -chown -R mapred %s" % MAPRED_SYSTEM_DIR)
 
 
 #################################################################
@@ -430,7 +481,7 @@ def upgrade_hdfs():
     升级hdfs， 在namenode节点上执行
     """
     local("sudo /sbin/service hadoop-hdfs-namenode upgrade")
-    assert "namenode" in local("sudo %s" % get_jps_path(remote=0)).lower()
+    assert "namenode" in local("sudo %s" % get_jps_path(remote=False), capture=True).lower()
 
 
 def start_datanode_cdh4():
@@ -439,7 +490,7 @@ def start_datanode_cdh4():
     等待namenode退出安全模式
     """
     sudo("/sbin/service hadoop-hdfs-datanode start")
-    assert "datanode" in sudo("%s" % get_jps_path(remote=1)).lower()
+    assert "datanode" in sudo("%s" % get_jps_path(remote=True)).lower()
 
 
 def start_tasktracker_cdh4():
@@ -447,7 +498,7 @@ def start_tasktracker_cdh4():
     在每个datanode上启动TaskTracker
     """
     sudo("/sbin/service hadoop-0.20-mapreduce-tasktracker start")
-    assert "tasktracker" in sudo("%s" % get_jps_path(remote=1)).lower()
+    assert "tasktracker" in sudo("%s" % get_jps_path(remote=True)).lower()
 
 
 def start_jobtracker_cdh4():
@@ -455,7 +506,7 @@ def start_jobtracker_cdh4():
     在namenode节点上启动JobTracker
     """
     local("sudo /sbin/service hadoop-0.20-mapreduce-jobtracker start")
-    assert "jobtracker" in local("sudo %s" % get_jps_path(remote=0)).lower()
+    assert "jobtracker" in local("sudo %s" % get_jps_path(remote=False), capture=True).lower()
 
 #################################################################
 
