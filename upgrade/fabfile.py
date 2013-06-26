@@ -11,6 +11,7 @@ import os
 from fabric.api import *
 from fabric.colors import red
 from fabric.contrib.files import exists
+import time
 
 from config import *
 from utils import *
@@ -152,9 +153,32 @@ def confirm_hbase_stopped():
     在所有datanode节点上检查hbase是否已被停止
     """
     output = sudo("%s" % get_jps_path(remote=True))
+    assert "hmaster" not in output.lower()
+    assert "hquorumpeer" not in output.lower()
+
+    if "hregionserver" in output.lower():
+        print red("hregionserver is still running...")
+
+        hregionserver_pid = None
+        lines = output.strip().split('\n')
+        for line in lines:
+            pid, pname = line.strip().split()
+            if pname.lower() == "hregionserver":
+                hregionserver_pid = pid
+        print red("hregionserver pid: %s" % hregionserver_pid)
+
+        times = 3
+        while times > 0:
+            print red("attempt to kill hregionserver...")
+            run("kill %s" % hregionserver_pid)
+            time.sleep(2)
+            output = sudo("%s" % get_jps_path(remote=True))
+            if "hregionserver" not in output.lower():
+                break
+            times = times - 1
+
     for daemon in ["hmaster", "hregionserver", "hquorumpeer"]:
         assert daemon not in output.lower()
-        #todo : kill -9 if not stopped?
 
 
 def stop_jobtracker_cdh3():
@@ -419,7 +443,12 @@ def change_mod_and_perm(remote):
             if os.path.exists(mapred_local_dir):
                 local("sudo chown -R mapred:mapred %s" % mapred_local_dir)
 
-        local("sudo -u hdfs hadoop fs -chown -R mapred %s" % MAPRED_SYSTEM_DIR)
+
+def chown_mapred_system_dir():
+    """
+    exec this task when hdfs is running.
+    """
+    local("sudo -u hdfs hadoop fs -chown -R mapred %s" % MAPRED_SYSTEM_DIR)
 
 
 #################################################################

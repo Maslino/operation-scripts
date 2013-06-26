@@ -39,22 +39,22 @@ HDFS_DATA_DIR_LIST = [
 #################################################################################
 # for production environment
 
-MAPRED_SYSTEM_DIR = "/data/hadoop/cache/hadoop/mapred/system"
-MAPRED_LOCAL_DIR_LIST = [
-    "/data/hadoop/cache/hadoop/mapred/local",
-    "/data2/hadoop/cache/hadoop/mapred/local",
-    "/data3/hadoop/cache/hadoop/mapred/local",
-    "/data4/hadoop/cache/hadoop/mapred/local",
-]
-HDFS_NAME_DIR_LIST = [
-    "/data/hadoop/cache/hadoop/dfs/name",
-]
-HDFS_DATA_DIR_LIST = [
-    "/data/hadoop/cache/hadoop/dfs/data",
-    "/data2/hadoop/cache/hadoop/dfs/data",
-    "/data3/hadoop/cache/hadoop/dfs/data",
-    "/data4/hadoop/cache/hadoop/dfs/data",
-]
+# MAPRED_SYSTEM_DIR = "/data/hadoop/cache/hadoop/mapred/system"
+# MAPRED_LOCAL_DIR_LIST = [
+#     "/data/hadoop/cache/hadoop/mapred/local",
+#     "/data2/hadoop/cache/hadoop/mapred/local",
+#     "/data3/hadoop/cache/hadoop/mapred/local",
+#     "/data4/hadoop/cache/hadoop/mapred/local",
+# ]
+# HDFS_NAME_DIR_LIST = [
+#     "/data/hadoop/cache/hadoop/dfs/name",
+# ]
+# HDFS_DATA_DIR_LIST = [
+#     "/data/hadoop/cache/hadoop/dfs/data",
+#     "/data2/hadoop/cache/hadoop/dfs/data",
+#     "/data3/hadoop/cache/hadoop/dfs/data",
+#     "/data4/hadoop/cache/hadoop/dfs/data",
+# ]
 
 
 ##################################################################################
