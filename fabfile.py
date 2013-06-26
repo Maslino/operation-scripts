@@ -33,7 +33,7 @@ env.roledefs = {
         "hadoop@10.1.16.222",
     ),
     "dev-online":(
-        "hadoop@69.28.58.35",
+        "hadoop@dev-online",
     )
 }
 
