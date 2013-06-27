@@ -82,7 +82,7 @@ def make_directory(remote):
     在所有节点上创建相关目录
     """
     remote = convert_str_to_bool(remote)
-    for directory in (BACKUP_DIR, DOWNLOAD_DIR):
+    for directory in (BACKUP_DIR, DOWNLOAD_DIR, RELEASE_DIR):
         if remote:
             if not exists(directory):
                 run("mkdir -p %s" % directory)
@@ -494,6 +494,70 @@ def start_jobtracker_cdh4():
 
 
 #################################################################
+
+
+def rsync_hbase_0_94_6_hadoop_2():
+    hbase_tarball = os.path.join(RELEASE_DIR, HBASE_0_94_6_HADOOP_2_TAR_GZ)
+    assert os.path.exists(hbase_tarball)
+
+    target_host = "@".join([env.user, env.host])
+    local("rsync --progress %s %s:%s" % (hbase_tarball, target_host, RELEASE_DIR))
+
+
+def setup_hbase_0_94_6_hadoop_2():
+    hbase_tarball = os.path.join(RELEASE_DIR, HBASE_0_94_6_HADOOP_2_TAR_GZ)
+    assert exists(hbase_tarball)
+
+    with cd(RELEASE_DIR):
+        run("tar zxf %s" % HBASE_0_94_6_HADOOP_2_TAR_GZ)
+        run("mv %s %s" % (HBASE_0_94_6_DIR, HBASE_0_94_6_HADOOP_2_DIR))
+
+
+def config_hbase_0_94_6_hadoop_2():
+    old_hbase_conf_dir = os.path.join(HBASE_HOME_DIR, "conf")
+    assert exists(old_hbase_conf_dir)
+
+    new_hbase_home_dir = os.path.join(RELEASE_DIR, HBASE_0_94_6_HADOOP_2_DIR)
+    with cd(new_hbase_home_dir):
+        assert exists(os.path.join(new_hbase_home_dir, "conf"))
+        run("mv conf conf.empty")
+        run("mkdir conf")
+        run("cp %s %s" % (old_hbase_conf_dir + "/*", os.path.join(new_hbase_home_dir, "conf")))
+
+        run("rm %s" % HBASE_HOME_DIR)
+        run("ln -s %s %s" % (new_hbase_home_dir, HBASE_HOME_DIR))
+
+
+def start_hbase_0_94_6_hadoop_2():
+    """
+    在start前确认coprocessor jar是否在lib目录中；
+    配置文件中hbase.hstore.compactionThreshold和hbase.hstore.blockingStoreFiles
+    属性的值是否为一个足够大的整数而不是Integer.MAX_VALUE
+    """
+    confirm_hbase_stopped()
+    with cd(HBASE_HOME_DIR):
+        run("bin/start-hbase.sh")
+
+    time.sleep(2)
+
+    output = sudo("%s" % get_jps_path(remote=True))
+    success = True
+    for daemon in ["hmaster", "hregionserver", "hquorumpeer"]:
+        if daemon not in output.lower():
+            success = False
+            print red("%s not started, please check" % daemon)
+
+    if not success:
+        raise Exception("start hbase failed.")
+
+
+#################################################################
+
+
+def update_hbase():
+    execute(rsync_hbase_0_94_6_hadoop_2, role="dev-online")
+    execute(setup_hbase_0_94_6_hadoop_2, role="dev-online")
+    execute(config_hbase_0_94_6_hadoop_2, role="dev-online")
 
 
 def before_upgrade_metadata_dev():

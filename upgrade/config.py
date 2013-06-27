@@ -6,6 +6,7 @@ define some constants
 HBASE_HOME_DIR = "/home/hadoop/hbase-single"
 BACKUP_DIR = "/home/hadoop/backup"
 DOWNLOAD_DIR = "/home/hadoop/download"
+RELEASE_DIR = "/home/hadoop/release"
 
 
 HBASE_HBCK_OLD_LOG = "hbase-hbck-old.log"
@@ -60,3 +61,7 @@ HDFS_DATA_DIR_LIST = [
 ##################################################################################
 
 PREPARED_CONF_DIR_FOR_CDH4 = "/home/hadoop/backup/conf.cdh4.prepared"
+
+HBASE_0_94_6_HADOOP_2_TAR_GZ = "hbase-0.94.6-hadoop-2.0.tar.gz"
+HBASE_0_94_6_DIR = "hbase-0.94.6"
+HBASE_0_94_6_HADOOP_2_DIR = "hbase-0.94.6-hadoop-2.0"
