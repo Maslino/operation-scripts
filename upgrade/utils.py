@@ -15,3 +15,8 @@ def convert_str_to_bool(string):
 
 def date_suffix():
     return str(datetime.datetime.now()).replace(" ", "-").replace(":", "-")
+
+
+def validate_args(value, acceptable_vales):
+    if value not in acceptable_vales:
+        raise Exception()

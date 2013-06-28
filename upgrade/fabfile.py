@@ -119,6 +119,12 @@ def stop_hbase():
         run("%s" % stop_script)
 
 
+def start_hbase():
+    with cd(HBASE_HOME_DIR):
+        start_script = "bin/start-hbase.sh"
+        run("%s" % start_script)
+
+
 def detect_jdk_home(remote):
     remote = convert_str_to_bool(remote)
     jdk_home = None
@@ -181,20 +187,24 @@ def confirm_hbase_stopped():
         assert daemon not in output.lower()
 
 
-def stop_jobtracker_cdh3():
+def service_jobtracker_cdh3(start_or_stop):
     """
-    停止namenode节点上的jobtracker服务
+    停止/启动namenode节点上的jobtracker服务
     """
+    validate_args(start_or_stop, ("start", "stop"))
+
     jobtracker_service = "hadoop-0.20-jobtracker"
-    local("sudo /sbin/service %s stop" % jobtracker_service)
+    local("sudo /sbin/service %s %s" % (jobtracker_service, start_or_stop))
 
 
-def stop_tasktracker_cdh3():
+def service_tasktracker_cdh3(start_or_stop):
     """
-    停止所有datanode节点上的tasktracker服务
+    停止/启动所有datanode节点上的tasktracker服务
     """
+    validate_args(start_or_stop, ("start", "stop"))
+
     tasktracker_service = "hadoop-0.20-tasktracker"
-    sudo("/sbin/service %s stop" % tasktracker_service)
+    sudo("/sbin/service %s %s" % (tasktracker_service, start_or_stop))
 
 
 def confirm_mapred_stopped(remote):
@@ -226,20 +236,24 @@ def check_hdfs():
         raise Exception("hdfs is not healthy")
 
 
-def stop_namenode_cdh3():
+def service_namenode_cdh3(start_or_stop):
     """
-    停止namenode节点上的namenode服务
+    停止/启动namenode节点上的namenode服务
     """
+    validate_args(start_or_stop, ("start", "stop"))
+
     namenode_service = "hadoop-0.20-namenode"
-    local("sudo /sbin/service %s stop" % namenode_service)
+    local("sudo /sbin/service %s %s" % (namenode_service, start_or_stop))
 
 
-def stop_datanode_cdh3():
+def service_datanode_cdh3(start_or_stop):
     """
-    停止所有datanode节点上的datanode服务
+    停止/启动所有datanode节点上的datanode服务
     """
+    validate_args(start_or_stop, ("start", "stop"))
+
     datanode_service = "hadoop-0.20-datanode"
-    sudo("/sbin/service %s stop" % datanode_service)
+    sudo("/sbin/service %s %s" % (datanode_service, start_or_stop))
 
 
 def confirm_hdfs_stopped(remote):
@@ -462,29 +476,50 @@ def upgrade_hdfs():
     assert "namenode" in local("sudo %s" % get_jps_path(remote=False), capture=True).lower()
 
 
-def start_datanode_cdh4():
+def service_datanode_cdh4(start_or_stop):
     """
-    启动所有datanode节点
-    等待namenode退出安全模式
+    启动/停止所有datanode节点
     """
-    sudo("/sbin/service hadoop-hdfs-datanode start")
-    assert "datanode" in sudo("%s" % get_jps_path(remote=True)).lower()
+    validate_args(start_or_stop, ("start", "stop"))
+
+    sudo("/sbin/service hadoop-hdfs-datanode %s" % start_or_stop)
+
+    output = sudo("%s" % get_jps_path(remote=True))
+    if start_or_stop == "start":
+        assert "datanode" in output.lower()
+    elif start_or_stop == "stop":
+        assert "datanode" not in output.lower()
 
 
-def start_tasktracker_cdh4():
+def service_tasktracker_cdh4(start_or_stop):
     """
-    在每个datanode上启动TaskTracker
+    在每个datanode上启动/停止TaskTracker
     """
-    sudo("/sbin/service hadoop-0.20-mapreduce-tasktracker start")
-    assert "tasktracker" in sudo("%s" % get_jps_path(remote=True)).lower()
+    validate_args(start_or_stop, ("start", "stop"))
+
+    sudo("/sbin/service hadoop-0.20-mapreduce-tasktracker %s" % start_or_stop)
+
+    output = sudo("%s" % get_jps_path(remote=True))
+    if start_or_stop == "start":
+        assert "tasktracker" in output.lower()
+    elif start_or_stop == "stop":
+        assert "tasktracker" not in output.lower()
 
 
-def start_jobtracker_cdh4():
+def service_jobtracker_cdh4(start_or_stop):
     """
-    在namenode节点上启动JobTracker
+    在namenode节点上启动/停止JobTracker
     """
-    local("sudo /sbin/service hadoop-0.20-mapreduce-jobtracker start")
-    assert "jobtracker" in local("sudo %s" % get_jps_path(remote=False), capture=True).lower()
+    validate_args(start_or_stop, ("start", "stop"))
+
+    local("sudo /sbin/service hadoop-0.20-mapreduce-jobtracker %s" % start_or_stop)
+
+    output = local("sudo %s" % get_jps_path(remote=False), capture=True)
+    if start_or_stop == "start":
+        assert "jobtracker" in output.lower()
+    elif start_or_stop == "stop":
+        assert "jobtracker" not in output.lower()
+
 
 #################################################################
 
@@ -567,14 +602,14 @@ def before_upgrade_metadata_dev():
     execute(stop_hbase, host='localhost')
     execute(confirm_hbase_stopped, host='localhost')
 
-    execute(stop_jobtracker_cdh3)
-    execute(stop_tasktracker_cdh3, host='localhost')
+    execute(service_jobtracker_cdh3, "stop")
+    execute(service_tasktracker_cdh3, "stop", host='localhost')
     execute(confirm_mapred_stopped, False)
     execute(confirm_mapred_stopped, True, host="localhost")
 
     execute(check_hdfs)
-    execute(stop_namenode_cdh3)
-    execute(stop_datanode_cdh3, host="localhost")
+    execute(service_namenode_cdh3, "stop")
+    execute(service_datanode_cdh3, "stop", host="localhost")
     execute(confirm_hdfs_stopped, False)
     execute(confirm_mapred_stopped, True, host="localhost")
 
