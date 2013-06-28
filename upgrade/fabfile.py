@@ -589,10 +589,16 @@ def start_hbase_0_94_6_hadoop_2():
 #################################################################
 
 
-def update_hbase():
+def update_hbase_dev():
     execute(rsync_hbase_0_94_6_hadoop_2, role="dev-online")
     execute(setup_hbase_0_94_6_hadoop_2, role="dev-online")
     execute(config_hbase_0_94_6_hadoop_2, role="dev-online")
+
+
+def update_hbase_pro():
+    execute(rsync_hbase_0_94_6_hadoop_2, role=ROLE_DATANODE_PRODUCTION)
+    execute(setup_hbase_0_94_6_hadoop_2, role=ROLE_DATANODE_PRODUCTION)
+    execute(config_hbase_0_94_6_hadoop_2, role=ROLE_DATANODE_PRODUCTION)
 
 
 def before_upgrade_metadata_dev():
@@ -611,7 +617,7 @@ def before_upgrade_metadata_dev():
     execute(service_namenode_cdh3, "stop")
     execute(service_datanode_cdh3, "stop", host="localhost")
     execute(confirm_hdfs_stopped, False)
-    execute(confirm_mapred_stopped, True, host="localhost")
+    execute(confirm_hdfs_stopped, True, host="localhost")
 
     execute(backup_hdfs_metadata)
     execute(backup_hadoop_conf)
@@ -626,3 +632,40 @@ def before_upgrade_metadata_dev():
     execute(update_conf, False)
     execute(change_mod_and_perm, False)
     execute(change_mod_and_perm, True, host="localhost")
+
+
+ROLE_DATANODE_PRODUCTION = "pro-dn"
+
+def before_upgrade_metadata_pro():
+    execute(make_directory, False)
+    execute(make_directory, True, role=ROLE_DATANODE_PRODUCTION)
+
+    execute(check_hbase, role=ROLE_DATANODE_PRODUCTION)
+    execute(stop_hbase, role=ROLE_DATANODE_PRODUCTION)
+    execute(confirm_hbase_stopped, role=ROLE_DATANODE_PRODUCTION)
+
+    execute(service_jobtracker_cdh3, "stop")
+    execute(service_tasktracker_cdh3, "stop", role=ROLE_DATANODE_PRODUCTION)
+    execute(confirm_mapred_stopped, False)
+    execute(confirm_mapred_stopped, True, role=ROLE_DATANODE_PRODUCTION)
+
+    execute(check_hdfs)
+    execute(service_namenode_cdh3, "stop")
+    execute(service_datanode_cdh3, "stop", role=ROLE_DATANODE_PRODUCTION)
+    execute(confirm_hdfs_stopped, False)
+    execute(confirm_hdfs_stopped, True, role=ROLE_DATANODE_PRODUCTION)
+
+    execute(backup_hdfs_metadata)
+    execute(backup_hadoop_conf)
+
+    execute(uninstall_cdh3, False)
+    execute(uninstall_cdh3, True, role=ROLE_DATANODE_PRODUCTION)
+    execute(install_cdh4, False)
+    execute(install_cdh4, True, role=ROLE_DATANODE_PRODUCTION)
+    execute(install_lzo, False)
+    execute(install_lzo, True, role=ROLE_DATANODE_PRODUCTION)
+
+    execute(update_conf, False)
+    execute(update_conf, True, role=ROLE_DATANODE_PRODUCTION)
+    execute(change_mod_and_perm, False)
+    execute(change_mod_and_perm, True, role=ROLE_DATANODE_PRODUCTION)
