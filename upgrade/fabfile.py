@@ -101,10 +101,10 @@ def check_hbase():
     success = True
     with cd(HBASE_HOME_DIR):
         run("bin/hbase hbck > %s 2>&1" % hbck_log)
-        last_two_line = run("tail -n2 %s" % hbck_log)
-        if "OK" not in last_two_line:
+        tail_lines = run("tail -n20 %s" % hbck_log)
+        if "OK" not in tail_lines:
             success = False
-            print red("hbck result: \n%s" % last_two_line)
+            print red("hbck result: \n%s" % tail_lines)
 
     if not success:
         raise Exception("hbck failed")
@@ -350,6 +350,7 @@ def install_cdh4(remote, centos_version=6):
             run("wget %s" % cdh4_rpm_url)
             sudo("yum --nogpgcheck localinstall -y cloudera-cdh-4-0.x86_64.rpm")
         else:
+            # todo: the files downloaded will not be saved in the DOWNLOAD_DIR but in the current working directory
             local("wget %s" % cdh4_rpm_url)
             local("sudo yum --nogpgcheck localinstall -y cloudera-cdh-4-0.x86_64.rpm")
 
@@ -460,7 +461,7 @@ def change_mod_and_perm(remote):
 
 def chown_mapred_system_dir():
     """
-    exec this task when hdfs is running.
+    exec this task when hdfs is running and before starting mapreduce service
     """
     local("sudo -u hdfs hadoop fs -chown -R mapred %s" % MAPRED_SYSTEM_DIR)
 
