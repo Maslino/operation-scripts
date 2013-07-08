@@ -73,10 +73,10 @@ def __clean_mapred_history(delete=False):
 
     # 删除30天前的的历史记录
     target_dir = os.path.join(MAPRED_HISTORY_DIR, "done/ELEX-LA-WEB1_1372484246521_")
-    last_month_dir = os.path.join(target_dir, "%d" % thirty_days_ago.year, "%02d" % (thirty_days_ago.month - 1, ))
+    month_dir_to_delete = os.path.join(target_dir, "%d" % thirty_days_ago.year, "%02d" % thirty_days_ago.month)
 
     for day in range(1, thirty_days_ago.day):
-        day_dir = os.path.join(last_month_dir, "%02d" % day)
+        day_dir = os.path.join(month_dir_to_delete, "%02d" % day)
         if not os.path.exists(day_dir):
             print "%s not exists." % day_dir
             continue
