@@ -88,9 +88,9 @@ def __clean_mapred_history(delete=False):
 
 
 def do_clean(delete=False):
-    execute(__clean_hbase_log, delete, role=PRODUCTION_DATANODE)
+    execute(__clean_hbase_log, delete, role=PRODUCTION_DATANODE_ONE)
     execute(__clean_hdfs_log, False, delete)
-    execute(__clean_hdfs_log, True, delete, roles=(PRODUCTION_DATANODE, PRODUCTION_DATANODE_NEW))
+    execute(__clean_hdfs_log, True, delete, roles=PRODUCTION_DATANODES)
     execute(__clean_mapred_log, False, delete)
-    execute(__clean_mapred_log, True, delete, roles=(PRODUCTION_DATANODE, PRODUCTION_DATANODE_NEW))
+    execute(__clean_mapred_log, True, delete, roles=PRODUCTION_DATANODES)
     execute(__clean_mapred_history, delete)
