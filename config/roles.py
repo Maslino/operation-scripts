@@ -40,6 +40,7 @@ env.roledefs = {
         "hadoop@192.168.1.29",
         "hadoop@192.168.1.30",
         "hadoop@192.168.1.31",
+        "hadoop@192.168.1.35",
     ),
     PRODUCTION_DATANODE_THREE: (
         "hadoop@192.168.1.26",
