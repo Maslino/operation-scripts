@@ -50,7 +50,44 @@ def exec_cmd(command_string, use_sudo='false'):
         run(command_string)
 
 
+def enable_epel(centos_version=6):
+    version = int(centos_version)
+    if version == 6:
+        epel_url = "http://ftp.cuhk.edu.hk/pub/linux/fedora-epel/6/i386/epel-release-6-8.noarch.rpm"
+        epel_pkg = "epel-release-6-8.noarch.rpm"
+    else:
+        epel_url = "http://ftp.cuhk.edu.hk/pub/linux/fedora-epel/5/i386/epel-release-5-4.noarch.rpm"
+        epel_pkg = "epel-release-5-4.noarch.rpm"
+
+    with cd(DOWNLOAD_DIR):
+        run("wget %s" % epel_url)
+        sudo("rpm -ivh %s" % epel_pkg)
+
+
 ###################################################################
+
+
+def install_jdk6():
+    jdk6_bin = "jdk-6u45-linux-x64.bin"
+    jdk6_dir = "jdk1.6.0_45"
+    target_dir = "/usr/java"
+
+    local("rsync --progress %s %s@%s:%s" %(os.path.join(DOWNLOAD_DIR, jdk6_bin), env.user, env.host, DOWNLOAD_DIR))
+
+    with cd(DOWNLOAD_DIR):
+        assert exists(os.path.join(DOWNLOAD_DIR, jdk6_bin))
+        run("chmod +x %s" % jdk6_bin)
+        run("./%s" % jdk6_bin)
+        if not exists(target_dir):
+            sudo("mkdir %s" % target_dir)
+        sudo("mv %s %s" %(jdk6_dir, os.path.join(target_dir, jdk6_dir)))
+
+    with cd(target_dir):
+        assert exists(os.path.join(target_dir, jdk6_dir))
+        for link in ("jdk", "latest"):
+            if exists(os.path.join(target_dir, link)):
+                sudo("rm %s" % link)
+            sudo("ln -s %s %s" % (os.path.join(target_dir, jdk6_dir), link))
 
 
 def install_jdk7():
@@ -377,6 +414,22 @@ def install_cdh4(remote, centos_version=6):
         local("sudo yum install -y hadoop-hdfs-datanode")
 
 
+def chkconfig_cdh4_service_off(remote):
+    """
+    关闭相关服务自启动
+    """
+    remote = convert_str_to_bool(remote)
+
+    if remote:
+        # off namenode and jobtracker service
+        sudo("chkconfig hadoop-hdfs-namenode off")
+        sudo("chkconfig hadoop-0.20-mapreduce-jobtracker off")
+    else:
+        # off datanode and tasktracker service
+        local("sudo chkconfig hadoop-hdfs-datanode off")
+        local("sudo chkconfig hadoop-0.20-mapreduce-tasktracker off")
+
+
 def install_lzo(remote, centos_version=6):
     """
     在所有节点上安装LZO压缩库
@@ -670,3 +723,39 @@ def before_upgrade_metadata_pro():
     execute(update_conf, True, role=ROLE_DATANODE_PRODUCTION)
     execute(change_mod_and_perm, False)
     execute(change_mod_and_perm, True, role=ROLE_DATANODE_PRODUCTION)
+
+
+def make_data_dir():
+    data_dir_list = [
+        "/data0/hadoop/cache/hadoop/dfs/data",
+        "/data1/hadoop/cache/hadoop/dfs/data",
+        "/data2/hadoop/cache/hadoop/dfs/data",
+        "/data3/hadoop/cache/hadoop/dfs/data",
+        "/data4/hadoop/cache/hadoop/dfs/data",
+        "/data5/hadoop/cache/hadoop/dfs/data",
+    ]
+
+    for data_dir in data_dir_list:
+        sudo("mkdir -p %s" % data_dir)
+        sudo("chown -R hdfs:hdfs %s" % data_dir)
+
+    mapred_local_dir_list = [
+        "/data0/hadoop/cache/hadoop/mapred/local",
+        "/data1/hadoop/cache/hadoop/mapred/local",
+        "/data2/hadoop/cache/hadoop/mapred/local",
+        "/data3/hadoop/cache/hadoop/mapred/local",
+        "/data4/hadoop/cache/hadoop/mapred/local",
+        "/data5/hadoop/cache/hadoop/mapred/local",
+    ]
+
+    for local_dir in mapred_local_dir_list:
+        sudo("mkdir -p %s" % local_dir)
+        sudo("chown -R mapred:mapred %s" % local_dir)
+
+
+def ntp():
+    sudo("yum -y install ntp")
+    sudo("chkconfig ntpd on")
+    sudo("cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime")
+    sudo("/sbin/service ntpd start")
+    sudo("ntpdate -u  pool.ntp.org")
