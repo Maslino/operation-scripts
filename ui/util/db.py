@@ -3,8 +3,8 @@
 import commands
 from defines import *
 
-MYSQL_USER = "xingyun"
-MYSQL_PASSWD = "Ohth3cha"
+MYSQL_USER = ""
+MYSQL_PASSWD = ""
 MYSQL_CMD_FORMAT = "mysql -u%s -p%s -e '%%s'" % (MYSQL_USER, MYSQL_PASSWD)
 
 
