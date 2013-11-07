@@ -13,6 +13,8 @@ PRODUCTION_DATANODE_TWO = "pro-dn-2"    # 6 data partition, 2 quad core cpu, res
 PRODUCTION_DATANODE_THREE = "pro-dn-3"  # 6 data partition1 1 quad core cpu, reserve 100G
 PRODUCTION_DATANODES = (PRODUCTION_DATANODE_ONE, PRODUCTION_DATANODE_TWO, PRODUCTION_DATANODE_THREE)
 
+PRODUCTION_DATALOADER = "pro-dl"
+
 DEVELOPMENT_NAMENODE = "dev-nn"
 DEVELOPMENT_DATANODE = "dev-dn"
 
@@ -45,6 +47,12 @@ env.roledefs = {
     PRODUCTION_DATANODE_THREE: (
         "hadoop@192.168.1.26",
         "hadoop@192.168.1.32",
+    ),
+    PRODUCTION_DATALOADER: (
+        "hadoop@dataloader0",
+        "hadoop@dataloader1",
+        "hadoop@dataloader2",
+        "hadoop@dataloader3",
     ),
     DEVELOPMENT_NAMENODE: (
         "hadoop@10.1.16.221",
