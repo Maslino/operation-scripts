@@ -43,8 +43,11 @@ def find_start_pos(start_date_string):
             if date_time < start_date:
                 target_line = line
             else:
-                items = target_line.split("\t")
-                return items[0], items[1]
+                if target_line is not None:
+                    items = target_line.split("\t")
+                    return items[0], items[1]
+                else:
+                    return datetime.strftime(start_date, "%Y%m%d"), "0"
 
 
 def find_stop_pos(stop_date_string):
