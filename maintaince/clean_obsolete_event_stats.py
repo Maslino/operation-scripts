@@ -30,7 +30,11 @@ def get_projects():
     return d.keys()
 
 
-def clean_obsolete_stats_for_project(project, before_day, clean=False):
+def clean_obsolete_stats_for_project(project, clean=False):
+    thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
+    before_day = long(str(thirty_days_ago).replace("-", ""))
+    print before_day
+
     stats_collection = db[EVENT_COLLECTION_NAME]
     query = {PROJECT_ID_FIELD: project, DATE_FIELD: {"$lt": before_day}}
     count = stats_collection.find(query).count()
@@ -41,7 +45,5 @@ def clean_obsolete_stats_for_project(project, before_day, clean=False):
 
 
 if __name__ == "__main__":
-    today = datetime.date.today()
-    today = long(str(today).replace("-", ""))
     for project in get_projects():
-        clean_obsolete_stats_for_project(project, today, clean=False)
+        clean_obsolete_stats_for_project(project, clean=False)
