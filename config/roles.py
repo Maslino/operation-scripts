@@ -18,8 +18,13 @@ PRODUCTION_DATALOADER = "pro-dl"
 DEVELOPMENT_NAMENODE = "dev-nn"
 DEVELOPMENT_DATANODE = "dev-dn"
 
+PRODUCTION_QM_61 = "qm-61"
+
 
 env.roledefs = {
+    PRODUCTION_QM_61: (
+      "hadoop@192.168.1.61",
+    ),
     PRODUCTION_NAMENODE: (
         "hadoop@pro-nn",
     ),
