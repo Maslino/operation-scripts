@@ -100,7 +100,7 @@ def supervisor_drill(restart=False):
     execute(stop_drill)
     time.sleep(1)
     execute(start_drill)
-    time.sleep(1)
+    time.sleep(30)
 
     execute(start_qm_141)
     time.sleep(1)
