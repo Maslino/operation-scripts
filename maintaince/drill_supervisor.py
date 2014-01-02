@@ -68,12 +68,29 @@ def start_qm_61():
     run("echo %s > %s" % (START_QM_SIGNAL, START_QM_SIGNAL_FILE))
 
 
-def supervisor_drill():
-    if not is_drill_down():
+def __arg2bool(arg):
+    if isinstance(arg, bool):
+        return arg
+    if arg.lower() == "false":
+        return False
+    if arg.lower() == "true":
+        return True
+
+    raise Exception("Invalid arg: %s" % arg)
+
+
+def supervisor_drill(restart=False):
+    restart = __arg2bool(restart)
+    down = is_drill_down()
+
+    if not (down or restart):
         print green("Drill is not down.")
         return
 
-    print red("Drill is down.")
+    if down:
+        print red("Drill is down.")
+
+    print yellow("restart...")
 
     execute(shutdown_qm_141)
     time.sleep(1)
